@@ -1,0 +1,29 @@
+# /etc/systemd/system/tenderwatch-api.service
+# Systemd service for the FastAPI backend
+# Enable: systemctl enable tenderwatch-api && systemctl start tenderwatch-api
+
+[Unit]
+Description=TenderWatch FastAPI Backend
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tenderwatch
+WorkingDirectory=/opt/tenderwatch-saas/backend
+EnvironmentFile=/opt/tenderwatch-saas/backend/.env
+
+ExecStart=/opt/tenderwatch-saas/venv/bin/uvicorn main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 2 \
+    --log-level info
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tenderwatch-api
+
+[Install]
+WantedBy=multi-user.target

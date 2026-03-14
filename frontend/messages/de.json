@@ -1,0 +1,99 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tenders": "Ausschreibungen",
+    "profiles": "Profile",
+    "settings": "Einstellungen",
+    "logout": "Abmelden"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "workingOn": "In Bearbeitung",
+    "interested": "Interessiert",
+    "recentTenders": "Aktuelle Ausschreibungen",
+    "lastScan": "Letzter Scan",
+    "noWorkingOn": "Keine Ausschreibungen in Bearbeitung",
+    "noInterested": "Keine markierten Ausschreibungen",
+    "noTenders": "Noch keine Ausschreibungen gefunden. Bitte einen Scan starten."
+  },
+  "tenders": {
+    "title": "Ausschreibungen",
+    "search": "Suchen...",
+    "filterPlatform": "Plattform",
+    "filterMinScore": "Mindest-Score",
+    "allPlatforms": "Alle Plattformen",
+    "deadline": "Frist",
+    "client": "Auftraggeber",
+    "noDeadline": "Keine Frist",
+    "score": "Score",
+    "matchedKeywords": "Gefundene Keywords",
+    "openDetails": "Details",
+    "openPDF": "PDF",
+    "markInterested": "Interessiert",
+    "markWorking": "In Bearbeitung",
+    "removeStatus": "Status entfernen",
+    "sendBekanntmachung": "Keywords extrahieren",
+    "noResults": "Keine Ausschreibungen gefunden",
+    "loading": "Lade Ausschreibungen..."
+  },
+  "scores": {
+    "veryRelevant": "Sehr relevant",
+    "interesting": "Interessant",
+    "noteworthy": "Zur Kenntnis",
+    "lowRelevance": "Wenig relevant"
+  },
+  "profiles": {
+    "title": "Profile",
+    "new": "Neues Profil",
+    "name": "Profilname",
+    "description": "Beschreibung",
+    "emailDigest": "Täglicher E-Mail-Report",
+    "keywords": "Keywords",
+    "addKeyword": "Keyword hinzufügen",
+    "category": "Kategorie",
+    "categories": {
+      "leistung": "Leistung (+3)",
+      "allgemein": "Allgemein (+1)",
+      "firma": "Firma (+2)"
+    },
+    "source": {
+      "manual": "Manuell",
+      "pdf_extracted": "Aus PDF",
+      "tender_extracted": "Aus Ausschreibung"
+    },
+    "uploadPDF": "PDF hochladen",
+    "dragDrop": "PDF hier ablegen oder klicken",
+    "extractKeywords": "Keywords extrahieren",
+    "approveKeywords": "Keywords übernehmen",
+    "pendingApproval": "Zur Überprüfung",
+    "noProfiles": "Noch keine Profile. Erstelle dein erstes Profil.",
+    "deleteProfile": "Profil löschen",
+    "saveProfile": "Speichern"
+  },
+  "login": {
+    "title": "Anmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "submit": "Anmelden",
+    "error": "Ungültige Zugangsdaten"
+  },
+  "email": {
+    "recipients": "E-Mail-Empfänger",
+    "addRecipient": "Empfänger hinzufügen",
+    "emailAddress": "E-Mail-Adresse",
+    "recipientName": "Name (optional)",
+    "noRecipients": "Keine Empfänger",
+    "digestEnabled": "Täglicher Report aktiv",
+    "digestDisabled": "Täglicher Report deaktiviert",
+    "distributionList": "Verteiler"
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Gespeichert",
+    "confirm": "Bestätigen"
+  }
+}

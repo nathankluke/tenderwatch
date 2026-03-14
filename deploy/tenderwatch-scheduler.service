@@ -1,0 +1,24 @@
+# /etc/systemd/system/tenderwatch-scheduler.service
+# Systemd service for the daily scraping scheduler
+
+[Unit]
+Description=TenderWatch Daily Scheduler
+After=network.target tenderwatch-api.service
+Wants=tenderwatch-api.service
+
+[Service]
+Type=simple
+User=tenderwatch
+WorkingDirectory=/opt/tenderwatch-saas/backend
+EnvironmentFile=/opt/tenderwatch-saas/backend/.env
+
+ExecStart=/opt/tenderwatch-saas/venv/bin/python scheduler.py
+
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tenderwatch-scheduler
+
+[Install]
+WantedBy=multi-user.target

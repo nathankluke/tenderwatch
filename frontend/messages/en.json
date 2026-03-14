@@ -1,0 +1,99 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tenders": "Tenders",
+    "profiles": "Profiles",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "workingOn": "Working On",
+    "interested": "Interested",
+    "recentTenders": "Recent Tenders",
+    "lastScan": "Last Scan",
+    "noWorkingOn": "No tenders currently in progress",
+    "noInterested": "No tenders marked as interested",
+    "noTenders": "No tenders found yet. Please run a scan."
+  },
+  "tenders": {
+    "title": "Tenders",
+    "search": "Search...",
+    "filterPlatform": "Platform",
+    "filterMinScore": "Min. Score",
+    "allPlatforms": "All Platforms",
+    "deadline": "Deadline",
+    "client": "Client",
+    "noDeadline": "No deadline",
+    "score": "Score",
+    "matchedKeywords": "Matched Keywords",
+    "openDetails": "Details",
+    "openPDF": "PDF",
+    "markInterested": "Interested",
+    "markWorking": "Working On",
+    "removeStatus": "Remove status",
+    "sendBekanntmachung": "Extract Keywords",
+    "noResults": "No tenders found",
+    "loading": "Loading tenders..."
+  },
+  "scores": {
+    "veryRelevant": "Very relevant",
+    "interesting": "Interesting",
+    "noteworthy": "Noteworthy",
+    "lowRelevance": "Low relevance"
+  },
+  "profiles": {
+    "title": "Profiles",
+    "new": "New Profile",
+    "name": "Profile Name",
+    "description": "Description",
+    "emailDigest": "Daily Email Digest",
+    "keywords": "Keywords",
+    "addKeyword": "Add keyword",
+    "category": "Category",
+    "categories": {
+      "leistung": "Service (+3)",
+      "allgemein": "General (+1)",
+      "firma": "Company (+2)"
+    },
+    "source": {
+      "manual": "Manual",
+      "pdf_extracted": "From PDF",
+      "tender_extracted": "From Tender"
+    },
+    "uploadPDF": "Upload PDF",
+    "dragDrop": "Drop PDF here or click to upload",
+    "extractKeywords": "Extract Keywords",
+    "approveKeywords": "Save Keywords",
+    "pendingApproval": "Pending Approval",
+    "noProfiles": "No profiles yet. Create your first profile.",
+    "deleteProfile": "Delete Profile",
+    "saveProfile": "Save"
+  },
+  "login": {
+    "title": "Sign In",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign In",
+    "error": "Invalid credentials"
+  },
+  "email": {
+    "recipients": "Email Recipients",
+    "addRecipient": "Add Recipient",
+    "emailAddress": "Email Address",
+    "recipientName": "Name (optional)",
+    "noRecipients": "No recipients",
+    "digestEnabled": "Daily digest enabled",
+    "digestDisabled": "Daily digest disabled",
+    "distributionList": "Recipients"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Saved",
+    "confirm": "Confirm"
+  }
+}
