@@ -24,9 +24,21 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     api.profiles.list()
-      .then(p => {
-        setProfiles(p)
-        if (p.length > 0) setActiveProfileId(p[0].id)
+      .then(async (p) => {
+        if (p.length === 0) {
+          // Auto-create a default profile for new users
+          try {
+            const defaultProfile = await api.profiles.create({ name: 'Mein Profil' })
+            setProfiles([defaultProfile])
+            setActiveProfileId(defaultProfile.id)
+          } catch (e: any) {
+            console.error('Failed to create default profile:', e)
+            setError(e.message)
+          }
+        } else {
+          setProfiles(p)
+          setActiveProfileId(p[0].id)
+        }
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))

@@ -21,6 +21,7 @@ export default function Sidebar() {
   const [showNewInput, setShowNewInput] = useState(false)
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
 
   const isSettings = pathname.includes('/settings')
 
@@ -28,11 +29,15 @@ export default function Sidebar() {
     e.preventDefault()
     if (!newName.trim() || creating) return
     setCreating(true)
+    setCreateError('')
     try {
       await createProfile(newName.trim())
       setNewName('')
       setShowNewInput(false)
-    } catch {}
+    } catch (err: any) {
+      setCreateError(err.message || 'Fehler beim Erstellen')
+      console.error('Profile creation failed:', err)
+    }
     setCreating(false)
   }
 
@@ -75,6 +80,9 @@ export default function Sidebar() {
                          rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-white/40"
               onKeyDown={e => { if (e.key === 'Escape') setShowNewInput(false) }}
             />
+            {createError && (
+              <p className="text-red-400 text-[10px] mt-1 px-1">{createError}</p>
+            )}
           </form>
         )}
 
