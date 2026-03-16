@@ -78,8 +78,8 @@ class BaseScraper(ABC):
         "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
     }
 
-    def __init__(self, config: dict = None):
-        self.config = config or {}
+    def __init__(self, config: dict | None = None):
+        self.config = config if isinstance(config, dict) else {}
         self.session = self._build_session()
 
     def _build_session(self) -> requests.Session:

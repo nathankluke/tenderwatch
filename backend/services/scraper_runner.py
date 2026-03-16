@@ -14,6 +14,21 @@ from scraper import ALL_SCRAPERS
 logger = logging.getLogger(__name__)
 
 
+def _load_scraper_config() -> dict:
+    """Load scraper config from Supabase settings or return sensible defaults."""
+    try:
+        client = get_client()
+        result = client.table("settings").select("value").eq(
+            "key", "scraper_config"
+        ).limit(1).execute()
+        if result.data:
+            import json
+            return json.loads(result.data[0]["value"]) if isinstance(result.data[0]["value"], str) else result.data[0]["value"]
+    except Exception:
+        pass
+    return {}
+
+
 async def run_all_scrapers() -> list[str]:
     """
     Runs all scrapers, upserts tenders into Supabase.
@@ -21,6 +36,7 @@ async def run_all_scrapers() -> list[str]:
     """
     client = get_client()
     new_ids = []
+    config = _load_scraper_config()
 
     for ScraperClass in ALL_SCRAPERS:
         platform_name = getattr(ScraperClass, 'PLATFORM_NAME', ScraperClass.__name__)
@@ -32,7 +48,7 @@ async def run_all_scrapers() -> list[str]:
         run_id = run_record.data[0]["id"]
 
         try:
-            scraper = ScraperClass()
+            scraper = ScraperClass(config=config)
             tenders = scraper.fetch()
             logger.info(f"{platform_name}: {len(tenders)} gefunden")
 
