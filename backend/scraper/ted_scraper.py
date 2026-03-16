@@ -6,22 +6,16 @@ No API key required for search.
 """
 
 import logging
-from datetime import datetime, timedelta
 
 from .base import BaseScraper, Tender
 
 logger = logging.getLogger(__name__)
 
-# CPV-Codes für Ingenieurdienstleistungen
-ENGINEERING_CPV = "71000000"  # Hauptgruppe: deckt alle 71xxx ab
-
 
 class TEDScraper(BaseScraper):
     PLATFORM_NAME = "TED Europa"
-    API_BASE = "https://api.ted.europa.eu/v3"
     SEARCH_URL = "https://api.ted.europa.eu/v3/notices/search"
 
-    # Felder die wir von der API abfragen
     RESULT_FIELDS = [
         "publication-number",
         "notice-title",
@@ -35,27 +29,31 @@ class TEDScraper(BaseScraper):
     def __init__(self, config: dict | None = None):
         super().__init__(config)
 
-    def fetch(self) -> list[Tender]:
-        if not self.config.get("platforms", {}).get("ted", {}).get("enabled", True):
+    def fetch(self, keywords: list[str] | None = None) -> list[Tender]:
+        """
+        Sucht TED-Ausschreibungen basierend auf Keywords.
+        Ohne Keywords werden nur CPV 71xxx (Ingenieur) in DE gesucht.
+        Mit Keywords wird gezielt nach diesen Begriffen gesucht.
+        """
+        if not keywords:
+            keywords = self.config.get("keywords", [])
+
+        if not keywords:
+            logger.warning("[TED] Keine Keywords konfiguriert, überspringe.")
             return []
 
-        logger.info("[TED] Starte Suche...")
-        tenders = []
+        logger.info(f"[TED] Suche mit {len(keywords)} Keywords: {keywords[:5]}...")
+        all_tenders = []
 
-        # Query: Deutsche Auftraggeber, Ingenieur-CPV, letzte 14 Tage
-        days_back = self.config.get("platforms", {}).get("ted", {}).get("days_back", 14)
-        countries = self.config.get("platforms", {}).get("ted", {}).get(
-            "countries", ["DEU", "AUT"]
-        )
-
-        for country in countries:
-            results = self._search_country(country, days_back)
-            tenders.extend(results)
+        # Suche pro Keyword (max 5 um API nicht zu überlasten)
+        for kw in keywords[:5]:
+            results = self._search_keyword(kw)
+            all_tenders.extend(results)
 
         # Deduplizieren
         seen = set()
         unique = []
-        for t in tenders:
+        for t in all_tenders:
             if t.id not in seen:
                 seen.add(t.id)
                 unique.append(t)
@@ -63,23 +61,27 @@ class TEDScraper(BaseScraper):
         logger.info(f"[TED] {len(unique)} Ausschreibungen gefunden.")
         return unique
 
-    def _search_country(self, country: str, days_back: int) -> list[Tender]:
-        """Sucht Ausschreibungen für ein Land."""
+    def _search_keyword(self, keyword: str) -> list[Tender]:
+        """Sucht nach einem Keyword in deutschen Ausschreibungen."""
+        # Suche in Titel und Beschreibung, nur Deutschland + Österreich,
+        # nur Vergabebekanntmachungen (cn-standard), letzte 14 Tage
+        days_back = self.config.get("days_back", 14)
+
         query = (
-            f"notice-type = cn-standard "
-            f"AND organisation-country-buyer = {country} "
-            f"AND classification-cpv = {ENGINEERING_CPV} "
-            f"AND publication-date >= today(-{days_back})"
+            f'notice-type = cn-standard '
+            f'AND organisation-country-buyer IN (DEU, AUT) '
+            f'AND publication-date >= today(-{days_back}) '
+            f'AND (notice-title ~ "{keyword}" OR description-lot ~ "{keyword}")'
         )
 
         payload = {
             "query": query,
             "fields": self.RESULT_FIELDS,
-            "limit": 100,
+            "limit": 20,
             "page": 1,
         }
 
-        logger.info(f"[TED] Suche: {country}, CPV {ENGINEERING_CPV}, letzte {days_back} Tage")
+        logger.info(f"[TED] Suche: '{keyword}'")
         resp = self.post(self.SEARCH_URL, json=payload)
         if not resp:
             return []
@@ -92,7 +94,7 @@ class TEDScraper(BaseScraper):
 
         notices = data.get("notices", [])
         total = data.get("totalNoticeCount", 0)
-        logger.info(f"[TED] {country}: {len(notices)} von {total} geladen")
+        logger.info(f"[TED] '{keyword}': {len(notices)} von {total} Ergebnissen")
 
         tenders = []
         for notice in notices:
@@ -103,27 +105,6 @@ class TEDScraper(BaseScraper):
             except Exception as e:
                 logger.warning(f"[TED] Fehler beim Parsen: {e}")
 
-        # Weitere Seiten laden (max 3 Seiten = 300 Ergebnisse)
-        page = 2
-        while len(notices) >= 100 and page <= 3:
-            payload["page"] = page
-            resp = self.post(self.SEARCH_URL, json=payload)
-            if not resp:
-                break
-            try:
-                data = resp.json()
-                notices = data.get("notices", [])
-                for notice in notices:
-                    try:
-                        t = self._parse_notice(notice)
-                        if t:
-                            tenders.append(t)
-                    except Exception:
-                        pass
-                page += 1
-            except Exception:
-                break
-
         return tenders
 
     def _parse_notice(self, notice: dict) -> Tender | None:
@@ -131,36 +112,27 @@ class TEDScraper(BaseScraper):
         if not pub_number:
             return None
 
-        # Titel: deutsch bevorzugen
         title = self._get_text(notice.get("notice-title", {}))
         if not title:
             return None
 
-        # Auftraggeber
         client = self._get_text(notice.get("buyer-name", {}))
-
-        # Beschreibung
         description = self._get_text(notice.get("description-lot", {}))
 
-        # CPV-Codes
         cpv_list = notice.get("classification-cpv", [])
         if isinstance(cpv_list, str):
             cpv_list = [cpv_list]
 
-        # Veröffentlichungsdatum
-        pub_date_raw = notice.get("publication-date", "")
-        pub_date = self.parse_date(pub_date_raw)
+        pub_date = self.parse_date(notice.get("publication-date", ""))
 
-        # Frist
         deadlines = notice.get("deadline-receipt-tender-date-lot", [])
         deadline = ""
         if deadlines and isinstance(deadlines, list):
-            # Nimm die späteste Frist (bei mehreren Losen)
             valid = [d for d in deadlines if d and d != "-"]
             if valid:
                 deadline = self.parse_date(valid[0])
 
-        # Links aus der API-Antwort
+        # Links
         links = notice.get("links", {})
         html_links = links.get("html", {})
         pdf_links = links.get("pdf", {})
@@ -200,21 +172,14 @@ class TEDScraper(BaseScraper):
         if isinstance(obj, str):
             return obj
         if isinstance(obj, dict):
-            # Deutsch bevorzugen
             for key in ["deu", "DEU", "ger", "GER"]:
                 val = obj.get(key)
                 if val:
-                    if isinstance(val, list):
-                        return val[0] if val else ""
-                    return str(val)
-            # Englisch als Fallback
+                    return val[0] if isinstance(val, list) and val else str(val)
             for key in ["eng", "ENG"]:
                 val = obj.get(key)
                 if val:
-                    if isinstance(val, list):
-                        return val[0] if val else ""
-                    return str(val)
-            # Irgendeine Sprache
+                    return val[0] if isinstance(val, list) and val else str(val)
             for val in obj.values():
                 if isinstance(val, list) and val:
                     return val[0]

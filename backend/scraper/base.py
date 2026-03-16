@@ -92,7 +92,7 @@ class BaseScraper(ABC):
         return session
 
     @abstractmethod
-    def fetch(self) -> list[Tender]:
+    def fetch(self, keywords: list[str] | None = None) -> list[Tender]:
         """Holt Ausschreibungen von der Plattform. Muss überschrieben werden."""
         pass
 

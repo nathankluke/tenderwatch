@@ -37,7 +37,7 @@ async def _run_pipeline(profile_id: str = None):
     logger.info(f"Pipeline gestartet (profile_id={profile_id})")
 
     try:
-        new_tender_ids = await run_all_scrapers()
+        new_tender_ids = await run_all_scrapers(profile_id=profile_id)
         logger.info(f"Scraping: {len(new_tender_ids)} neue Ausschreibungen")
 
         await score_new_tenders(new_tender_ids)
