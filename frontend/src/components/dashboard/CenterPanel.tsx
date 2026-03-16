@@ -28,6 +28,8 @@ export default function CenterPanel({
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [totalShown, setTotalShown] = useState(0)
+  const [scanning, setScanning] = useState(false)
+  const [scanStatus, setScanStatus] = useState('')
 
   // Debounce search to avoid excessive API calls
   const [searchDebounce, setSearchDebounce] = useState('')
@@ -81,6 +83,20 @@ export default function CenterPanel({
     setPage(prev => prev + 1)
   }
 
+  const handleScan = async () => {
+    setScanning(true)
+    setScanStatus(locale === 'de' ? 'Scan laeuft...' : 'Scanning...')
+    try {
+      const result = await api.dashboard.scan(profileId)
+      setScanStatus(locale === 'de' ? 'Scan gestartet' : 'Scan started')
+    } catch (e: any) {
+      setScanStatus(locale === 'de' ? `Fehler: ${e.message}` : `Error: ${e.message}`)
+    } finally {
+      setScanning(false)
+      setTimeout(() => setScanStatus(''), 5000)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Filters */}
@@ -116,6 +132,22 @@ export default function CenterPanel({
             className="flex-1 min-w-32 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+      </div>
+
+      {/* Scan button */}
+      <div className="flex items-center gap-2 mb-2 flex-shrink-0">
+        <button
+          onClick={handleScan}
+          disabled={scanning}
+          className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {scanning
+            ? (locale === 'de' ? 'Scannt...' : 'Scanning...')
+            : (locale === 'de' ? 'Scan jetzt starten' : 'Start scan now')}
+        </button>
+        {scanStatus && (
+          <span className="text-xs text-gray-500">{scanStatus}</span>
+        )}
       </div>
 
       {/* Count + token info */}

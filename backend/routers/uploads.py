@@ -159,7 +159,7 @@ async def delete_upload(
 async def list_uploads(profile_id: str, user_id: str = Depends(get_user_id)):
     client = get_client()
     result = client.table("pdf_uploads").select(
-        "id, filename, project_name, status, created_at, extracted_keywords"
+        "id, filename, project_name, storage_path, status, created_at, extracted_keywords"
     ).eq("profile_id", profile_id).eq("user_id", user_id).order(
         "created_at", desc=True
     ).execute()

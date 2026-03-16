@@ -68,7 +68,7 @@ export const api = {
 
   dashboard: {
     get: (profileId?: string)          => request<DashboardData>(`/dashboard${profileId ? `?profile_id=${profileId}` : ''}`),
-    scan: ()                           => request<{ status: string }>('/dashboard/scan', { method: 'POST' }),
+    scan: (profileId?: string)          => request<{ status: string }>(`/dashboard/scan${profileId ? `?profile_id=${profileId}` : ''}`, { method: 'POST' }),
   },
 
   uploads: {
@@ -164,6 +164,7 @@ export interface PdfUpload {
   id: string
   filename: string
   project_name?: string
+  storage_path?: string
   status: string
   created_at: string
   extracted_keywords?: ExtractedKeyword[]

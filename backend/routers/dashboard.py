@@ -117,16 +117,21 @@ async def get_dashboard(
 @router.post("/scan")
 async def trigger_scan(
     background_tasks: BackgroundTasks,
+    profile_id: Optional[str] = Query(None),
     user_id: str = Depends(get_user_id),
 ):
     """User-facing manual scan trigger."""
     service_key = os.getenv("INTERNAL_SERVICE_SECRET", "change-me-in-production")
     try:
         import httpx
+        params = {}
+        if profile_id:
+            params["profile_id"] = profile_id
         async with httpx.AsyncClient() as http_client:
             resp = await http_client.post(
                 "http://127.0.0.1:8000/internal/run-scrapers",
                 headers={"X-Service-Key": service_key},
+                params=params,
                 timeout=10,
             )
             resp.raise_for_status()
@@ -136,7 +141,7 @@ async def trigger_scan(
         logger.warning("httpx not installed, running pipeline directly")
         try:
             from routers.internal import _run_pipeline
-            background_tasks.add_task(_run_pipeline)
+            background_tasks.add_task(_run_pipeline, profile_id=profile_id)
             return {"status": "started"}
         except Exception as e:
             raise HTTPException(500, f"Scan konnte nicht gestartet werden: {e}")
@@ -145,7 +150,7 @@ async def trigger_scan(
         # Fallback: try running pipeline directly
         try:
             from routers.internal import _run_pipeline
-            background_tasks.add_task(_run_pipeline)
+            background_tasks.add_task(_run_pipeline, profile_id=profile_id)
             return {"status": "started"}
         except Exception as e2:
             raise HTTPException(500, f"Scan konnte nicht gestartet werden: {e2}")

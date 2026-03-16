@@ -277,7 +277,18 @@ export default function RightPanel({
                     {u.project_name && (
                       <span className="text-gray-900 font-medium truncate block">{u.project_name}</span>
                     )}
-                    <span className="text-gray-500 truncate block text-[10px]">{u.filename}</span>
+                    {u.storage_path ? (
+                      <a
+                        href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/pdf-uploads/${u.storage_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-700 underline truncate block text-[10px]"
+                      >
+                        {u.filename}
+                      </a>
+                    ) : (
+                      <span className="text-gray-500 truncate block text-[10px]">{u.filename}</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
