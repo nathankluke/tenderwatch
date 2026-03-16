@@ -35,6 +35,8 @@ class EvergabeOnlineScraper(BaseScraper):
             resp = self.get(url)
             if not resp:
                 continue
+            # Handle encoding issues (some German sites use ISO-8859-1)
+            resp.encoding = resp.apparent_encoding or 'utf-8'
             soup = BeautifulSoup(resp.text, "html.parser")
             tenders.extend(self._parse_table(soup, kw))
 
