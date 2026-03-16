@@ -77,6 +77,8 @@ export const api = {
       request<{ saved: number }>(`/profiles/${profileId}/upload-pdf/${uploadId}/approve`, {
         method: 'POST', body: JSON.stringify({ keywords }),
       }),
+    delete: (profileId: string, uploadId: string) =>
+      request<void>(`/profiles/${profileId}/uploads/${uploadId}`, { method: 'DELETE' }),
   },
 
   emailRecipients: {
@@ -161,6 +163,7 @@ export interface DashboardData {
 export interface PdfUpload {
   id: string
   filename: string
+  project_name?: string
   status: string
   created_at: string
   extracted_keywords?: ExtractedKeyword[]

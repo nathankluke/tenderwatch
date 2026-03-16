@@ -9,19 +9,18 @@ type Category = typeof CATEGORIES[number]
 
 // 4 shades of blue for keyword importance (darkest = most important)
 const BLUE_SHADES = [
-  { bg: 'bg-blue-800', text: 'text-white', border: 'border-blue-900', label: 4 },       // Very high
-  { bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-700', label: 3 },       // High
-  { bg: 'bg-blue-400', text: 'text-white', border: 'border-blue-500', label: 2 },       // Medium
-  { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-300', label: 1 },    // Low
+  { bg: 'bg-blue-800', text: 'text-white', border: 'border-blue-900', label: 4 },
+  { bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-700', label: 3 },
+  { bg: 'bg-blue-400', text: 'text-white', border: 'border-blue-500', label: 2 },
+  { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-300', label: 1 },
 ] as const
 
-// Assign importance shade based on category: leistung=highest, firma=medium, allgemein=lowest
 function getShadeIndex(category: string): number {
   switch (category) {
-    case 'leistung': return 0  // Darkest blue - most important
-    case 'firma': return 1     // Dark blue
-    case 'allgemein': return 2 // Medium blue
-    default: return 3          // Light blue
+    case 'leistung': return 0
+    case 'firma': return 1
+    case 'allgemein': return 2
+    default: return 3
   }
 }
 
@@ -42,6 +41,7 @@ export default function RightPanel({
   const [selectedKws, setSelectedKws] = useState<Set<number>>(new Set())
   const [isDragging, setIsDragging] = useState(false)
   const [uploads, setUploads] = useState<PdfUpload[]>([])
+  const [projectName, setProjectName] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Load keywords and uploads when profile changes
@@ -52,12 +52,19 @@ export default function RightPanel({
     setExtractedKws([])
     setUploadStatus('')
     setUploadId(null)
+    setProjectName('')
   }, [profileId])
 
   const refreshKeywords = async () => {
     if (!profileId) return
     const updated = await api.keywords.list(profileId)
     setKeywords(updated)
+  }
+
+  const refreshUploads = async () => {
+    if (!profileId) return
+    const updated = await api.uploads.list(profileId)
+    setUploads(updated)
   }
 
   const handleFileUpload = async (file: File) => {
@@ -72,6 +79,9 @@ export default function RightPanel({
 
     const formData = new FormData()
     formData.append('file', file)
+    if (projectName.trim()) {
+      formData.append('project_name', projectName.trim())
+    }
 
     try {
       const token = await getToken()
@@ -93,8 +103,8 @@ export default function RightPanel({
           ? `${data.extracted_keywords.length} Keywords gefunden`
           : `${data.extracted_keywords.length} keywords found`
       )
-      // Refresh uploads list
-      api.uploads.list(profileId).then(setUploads).catch(() => {})
+      setProjectName('')
+      await refreshUploads()
     } catch (e: any) {
       setUploadStatus(`Fehler: ${e.message}`)
     }
@@ -121,6 +131,18 @@ export default function RightPanel({
     )
   }
 
+  const deleteUpload = async (uploadId: string) => {
+    if (!profileId) return
+    try {
+      await api.uploads.delete(profileId, uploadId)
+      await refreshUploads()
+      await refreshKeywords()
+      setUploadStatus(locale === 'de' ? 'PDF geloescht' : 'PDF deleted')
+    } catch (e: any) {
+      setUploadStatus(`Fehler: ${e.message}`)
+    }
+  }
+
   const addKeyword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newKw.trim() || !profileId) return
@@ -135,7 +157,6 @@ export default function RightPanel({
     setKeywords(prev => prev.filter(k => k.id !== kwId))
   }
 
-  // Get color shade for a keyword based on category
   const getKeywordShade = (kw: Keyword) => {
     const baseIndex = getShadeIndex(kw.category)
     return BLUE_SHADES[baseIndex]
@@ -156,6 +177,15 @@ export default function RightPanel({
       {/* PDF Drop Zone */}
       <div className="bg-white rounded-xl border border-gray-100 p-3 flex-shrink-0">
         <h3 className="text-xs font-semibold text-gray-700 mb-2">{t('uploadPDF')}</h3>
+
+        {/* Optional project name */}
+        <input
+          value={projectName}
+          onChange={e => setProjectName(e.target.value)}
+          placeholder={locale === 'de' ? 'Projektname (optional)' : 'Project name (optional)'}
+          className="w-full text-xs border border-gray-200 rounded-md px-2 py-1.5 mb-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+
         <div
           onDrop={handleDrop}
           onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
@@ -229,7 +259,7 @@ export default function RightPanel({
         )}
       </div>
 
-      {/* Uploaded PDFs list */}
+      {/* Uploaded PDFs list with project names */}
       {uploads.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-3 flex-shrink-0">
           <h3 className="text-xs font-semibold text-gray-700 mb-2">
@@ -239,23 +269,39 @@ export default function RightPanel({
           <div className="space-y-1.5">
             {uploads.map(u => (
               <div key={u.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
                   </svg>
-                  <span className="text-gray-700 truncate">{u.filename}</span>
+                  <div className="min-w-0">
+                    {u.project_name && (
+                      <span className="text-gray-900 font-medium truncate block">{u.project_name}</span>
+                    )}
+                    <span className="text-gray-500 truncate block text-[10px]">{u.filename}</span>
+                  </div>
                 </div>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ml-2
-                  ${u.status === 'approved' ? 'bg-green-100 text-green-700'
-                    : u.status === 'pending_approval' ? 'bg-amber-100 text-amber-700'
-                    : u.status === 'processing' ? 'bg-blue-100 text-blue-700'
-                    : 'bg-red-100 text-red-700'}`}
-                >
-                  {u.status === 'approved' ? (locale === 'de' ? 'Genehmigt' : 'Approved')
-                    : u.status === 'pending_approval' ? (locale === 'de' ? 'Ausstehend' : 'Pending')
-                    : u.status === 'processing' ? (locale === 'de' ? 'Verarbeite' : 'Processing')
-                    : (locale === 'de' ? 'Fehler' : 'Error')}
-                </span>
+                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded
+                    ${u.status === 'approved' ? 'bg-green-100 text-green-700'
+                      : u.status === 'pending_approval' ? 'bg-amber-100 text-amber-700'
+                      : u.status === 'processing' ? 'bg-blue-100 text-blue-700'
+                      : 'bg-red-100 text-red-700'}`}
+                  >
+                    {u.status === 'approved' ? (locale === 'de' ? 'OK' : 'OK')
+                      : u.status === 'pending_approval' ? (locale === 'de' ? 'Offen' : 'Pending')
+                      : u.status === 'processing' ? (locale === 'de' ? '...' : '...')
+                      : (locale === 'de' ? 'Fehler' : 'Error')}
+                  </span>
+                  <button
+                    onClick={() => deleteUpload(u.id)}
+                    className="text-gray-300 hover:text-red-400 transition-colors"
+                    title={locale === 'de' ? 'Loeschen' : 'Delete'}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -314,7 +360,6 @@ export default function RightPanel({
           ))}
         </div>
 
-        {/* All keywords as color-coded tags */}
         {keywords.length === 0 ? (
           <p className="text-[10px] text-gray-400 py-2">
             {locale === 'de'

@@ -1,10 +1,12 @@
 import os
+import logging
 from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from typing import Optional
 from middleware.auth import get_user_id
 from db.supabase_client import get_client
 
 router = APIRouter()
+logger = logging.getLogger("dashboard")
 
 
 @router.get("")
@@ -25,7 +27,7 @@ async def get_dashboard(
             for t in tenders
         ]
 
-    # ── Working On ───────────────────────────────────────────────
+    # Working On
     working_result = client.table("tender_status").select(
         "tender_id, status, updated_at, tenders(*)"
     ).eq("user_id", user_id).eq("status", "working_on").order(
@@ -37,7 +39,7 @@ async def get_dashboard(
         if row.get("tenders")
     ]
 
-    # ── Interested ───────────────────────────────────────────────
+    # Interested
     interested_result = client.table("tender_status").select(
         "tender_id, status, updated_at, tenders(*)"
     ).eq("user_id", user_id).eq("status", "interested").order(
@@ -49,7 +51,7 @@ async def get_dashboard(
         if row.get("tenders")
     ]
 
-    # ── Recent Tenders (scored for this profile) ─────────────────
+    # Recent Tenders (scored for this profile)
     recent_query = client.table("tenders").select(
         "id, external_id, platform, title, client, deadline, publication_date, summary, url, pdf_url, created_at"
     ).order("created_at", desc=True).limit(20)
@@ -79,7 +81,7 @@ async def get_dashboard(
         reverse=True,
     )
 
-    # ── Completed (bid / no_bid) ──────────────────────────────────
+    # Completed (bid / no_bid)
     completed_result = client.table("tender_status").select(
         "tender_id, status, updated_at, tenders(*)"
     ).eq("user_id", user_id).in_("status", ["bid", "no_bid"]).order(
@@ -91,12 +93,16 @@ async def get_dashboard(
         if row.get("tenders")
     ]
 
-    # ── Last scrape info ─────────────────────────────────────────
-    last_scrape = client.table("scrape_runs").select(
-        "started_at, status"
-    ).order("started_at", desc=True).limit(1).execute()
-    last_scrape_at = last_scrape.data[0]["started_at"] if last_scrape.data else None
-    last_scrape_status = last_scrape.data[0]["status"] if last_scrape.data else None
+    # Last scrape info
+    try:
+        last_scrape = client.table("scrape_runs").select(
+            "started_at, status"
+        ).order("started_at", desc=True).limit(1).execute()
+        last_scrape_at = last_scrape.data[0]["started_at"] if last_scrape.data else None
+        last_scrape_status = last_scrape.data[0]["status"] if last_scrape.data else None
+    except Exception:
+        last_scrape_at = None
+        last_scrape_status = None
 
     return {
         "working_on": working_tenders,
@@ -114,17 +120,32 @@ async def trigger_scan(
     user_id: str = Depends(get_user_id),
 ):
     """User-facing manual scan trigger."""
-    import httpx
-
     service_key = os.getenv("INTERNAL_SERVICE_SECRET", "change-me-in-production")
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
+        import httpx
+        async with httpx.AsyncClient() as http_client:
+            resp = await http_client.post(
                 "http://127.0.0.1:8000/internal/run-scrapers",
                 headers={"X-Service-Key": service_key},
                 timeout=10,
             )
             resp.raise_for_status()
             return {"status": "started"}
+    except ImportError:
+        # httpx not installed, try running pipeline directly in background
+        logger.warning("httpx not installed, running pipeline directly")
+        try:
+            from routers.internal import _run_pipeline
+            background_tasks.add_task(_run_pipeline)
+            return {"status": "started"}
+        except Exception as e:
+            raise HTTPException(500, f"Scan konnte nicht gestartet werden: {e}")
     except Exception as e:
-        raise HTTPException(500, f"Scan konnte nicht gestartet werden: {e}")
+        logger.error(f"Scan trigger failed: {e}")
+        # Fallback: try running pipeline directly
+        try:
+            from routers.internal import _run_pipeline
+            background_tasks.add_task(_run_pipeline)
+            return {"status": "started"}
+        except Exception as e2:
+            raise HTTPException(500, f"Scan konnte nicht gestartet werden: {e2}")

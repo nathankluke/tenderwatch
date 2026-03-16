@@ -18,12 +18,14 @@ export default function EmailRecipientsModal({
   const [newEmail, setNewEmail] = useState('')
   const [newName, setNewName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!isOpen) return
     setLoading(true)
+    setError('')
     api.emailRecipients.list(profileId)
       .then(data => {
         setRecipients(data)
@@ -41,17 +43,16 @@ export default function EmailRecipientsModal({
     }
   }, [isOpen])
 
-  const addRecipient = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newEmail.trim()) return
+  const addRecipient = async () => {
+    if (!newEmail.trim() || adding) return
     setError('')
 
-    // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
-      setError(locale === 'de' ? 'Ungültige E-Mail-Adresse' : 'Invalid email address')
+      setError(locale === 'de' ? 'Ungueltige E-Mail-Adresse' : 'Invalid email address')
       return
     }
 
+    setAdding(true)
     try {
       const r = await api.emailRecipients.add(profileId, {
         email: newEmail.trim(),
@@ -60,12 +61,25 @@ export default function EmailRecipientsModal({
       setRecipients(prev => [...prev, r])
       setNewEmail('')
       setNewName('')
+      setTimeout(() => inputRef.current?.focus(), 50)
     } catch (e: any) {
       if (e.message.includes('409')) {
         setError(locale === 'de' ? 'E-Mail bereits vorhanden' : 'Email already exists')
       } else {
         setError(e.message)
       }
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addRecipient()
+    }
+    if (e.key === 'Escape') {
+      onClose()
     }
   }
 
@@ -82,12 +96,9 @@ export default function EmailRecipientsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-900">
             {locale === 'de' ? 'E-Mail-Verteiler' : 'Email Recipients'}
@@ -100,7 +111,6 @@ export default function EmailRecipientsModal({
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2">
@@ -108,23 +118,24 @@ export default function EmailRecipientsModal({
             </div>
           )}
 
-          {/* Add form */}
-          <form onSubmit={addRecipient} className="space-y-2">
+          {/* Enter key adds email */}
+          <div className="space-y-2" onKeyDown={handleKeyDown}>
             <div className="flex gap-2">
               <input
                 ref={inputRef}
-                type="email"
+                type="text"
                 value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-                placeholder={locale === 'de' ? 'E-Mail-Adresse' : 'Email address'}
+                onChange={e => { setNewEmail(e.target.value); setError('') }}
+                placeholder={locale === 'de' ? 'E-Mail eingeben + Enter' : 'Type email + press Enter'}
                 className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
-                type="submit"
-                className="px-4 py-2 text-sm font-medium text-white rounded-lg"
+                onClick={addRecipient}
+                disabled={adding}
+                className="px-4 py-2 text-sm font-medium text-white rounded-lg disabled:opacity-50"
                 style={{ background: 'var(--navy)' }}
               >
-                +
+                {adding ? '...' : '+'}
               </button>
             </div>
             <input
@@ -134,9 +145,8 @@ export default function EmailRecipientsModal({
               placeholder={locale === 'de' ? 'Name (optional)' : 'Name (optional)'}
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </form>
+          </div>
 
-          {/* Recipients list */}
           {loading ? (
             <div className="space-y-2">
               {[1, 2].map(i => (
@@ -146,8 +156,8 @@ export default function EmailRecipientsModal({
           ) : recipients.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-4">
               {locale === 'de'
-                ? 'Noch keine Empfänger. Füge E-Mail-Adressen hinzu.'
-                : 'No recipients yet. Add email addresses above.'}
+                ? 'Noch keine Empfaenger. E-Mail eingeben und Enter druecken.'
+                : 'No recipients yet. Type an email and press Enter.'}
             </p>
           ) : (
             <div className="space-y-1">
@@ -158,9 +168,7 @@ export default function EmailRecipientsModal({
                 >
                   <div>
                     <p className="text-sm text-gray-900">{r.email}</p>
-                    {r.name && (
-                      <p className="text-xs text-gray-500">{r.name}</p>
-                    )}
+                    {r.name && <p className="text-xs text-gray-500">{r.name}</p>}
                   </div>
                   <button
                     onClick={() => removeRecipient(r.id)}
@@ -174,11 +182,10 @@ export default function EmailRecipientsModal({
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-100 text-center">
           <p className="text-[10px] text-gray-400">
             {locale === 'de'
-              ? 'Diese Adressen erhalten den täglichen E-Mail-Report wenn aktiviert.'
+              ? 'Diese Adressen erhalten den taeglichen E-Mail-Report wenn aktiviert.'
               : 'These addresses will receive the daily email digest when enabled.'}
           </p>
         </div>
