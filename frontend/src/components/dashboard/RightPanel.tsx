@@ -1,16 +1,28 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { api, type Keyword, type ExtractedKeyword } from '@/lib/api'
 
 const CATEGORIES = ['leistung', 'allgemein', 'firma'] as const
 type Category = typeof CATEGORIES[number]
 
-const CATEGORY_COLORS: Record<Category, string> = {
-  leistung: 'bg-blue-50 text-blue-700 border-blue-100',
-  allgemein: 'bg-gray-50 text-gray-700 border-gray-200',
-  firma: 'bg-purple-50 text-purple-700 border-purple-100',
+// 4 shades of blue for keyword importance (darkest = most important)
+const BLUE_SHADES = [
+  { bg: 'bg-blue-800', text: 'text-white', border: 'border-blue-900', label: 4 },       // Very high
+  { bg: 'bg-blue-600', text: 'text-white', border: 'border-blue-700', label: 3 },       // High
+  { bg: 'bg-blue-400', text: 'text-white', border: 'border-blue-500', label: 2 },       // Medium
+  { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-300', label: 1 },    // Low
+] as const
+
+// Assign importance shade based on category: leistung=highest, firma=medium, allgemein=lowest
+function getShadeIndex(category: string): number {
+  switch (category) {
+    case 'leistung': return 0  // Darkest blue - most important
+    case 'firma': return 1     // Dark blue
+    case 'allgemein': return 2 // Medium blue
+    default: return 3          // Light blue
+  }
 }
 
 export default function RightPanel({
@@ -94,7 +106,7 @@ export default function RightPanel({
     setUploadId(null)
     setUploadStatus(
       locale === 'de'
-        ? `${result.saved} Keywords übernommen`
+        ? `${result.saved} Keywords uebernommen`
         : `${result.saved} keywords saved`
     )
   }
@@ -113,16 +125,17 @@ export default function RightPanel({
     setKeywords(prev => prev.filter(k => k.id !== kwId))
   }
 
-  const grouped = CATEGORIES.reduce((acc, cat) => {
-    acc[cat] = keywords.filter(k => k.category === cat)
-    return acc
-  }, {} as Record<Category, Keyword[]>)
+  // Get color shade for a keyword based on category
+  const getKeywordShade = (kw: Keyword) => {
+    const baseIndex = getShadeIndex(kw.category)
+    return BLUE_SHADES[baseIndex]
+  }
 
   if (!profileId) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-xs text-gray-400">
-          {locale === 'de' ? 'Profil auswählen' : 'Select a profile'}
+          {locale === 'de' ? 'Profil auswaehlen' : 'Select a profile'}
         </p>
       </div>
     )
@@ -148,6 +161,9 @@ export default function RightPanel({
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <p className="text-xs text-gray-500">{t('dragDrop')}</p>
+          <p className="text-[10px] text-gray-400 mt-1">
+            {locale === 'de' ? 'Fruehere Ausschreibungen fuer optimale Keywords' : 'Previous tenders for optimal keywords'}
+          </p>
           <input
             ref={fileRef}
             type="file"
@@ -165,28 +181,33 @@ export default function RightPanel({
         {extractedKws.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-medium text-gray-700 mb-1.5">
-              {locale === 'de' ? 'Keywords auswählen:' : 'Select keywords:'}
+              {locale === 'de' ? 'Keywords auswaehlen:' : 'Select keywords:'}
             </p>
             <div className="flex flex-wrap gap-1 mb-2">
-              {extractedKws.map((kw, i) => (
-                <label
-                  key={i}
-                  className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border cursor-pointer
-                    ${selectedKws.has(i) ? CATEGORY_COLORS[kw.category as Category] : 'bg-gray-50 text-gray-400 border-gray-200'}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedKws.has(i)}
-                    onChange={e => {
-                      const next = new Set(selectedKws)
-                      e.target.checked ? next.add(i) : next.delete(i)
-                      setSelectedKws(next)
-                    }}
-                    className="w-2.5 h-2.5"
-                  />
-                  {kw.keyword}
-                </label>
-              ))}
+              {extractedKws.map((kw, i) => {
+                const shade = BLUE_SHADES[getShadeIndex(kw.category)]
+                return (
+                  <label
+                    key={i}
+                    className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-all
+                      ${selectedKws.has(i)
+                        ? `${shade.bg} ${shade.text} ${shade.border}`
+                        : 'bg-gray-50 text-gray-400 border-gray-200'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedKws.has(i)}
+                      onChange={e => {
+                        const next = new Set(selectedKws)
+                        e.target.checked ? next.add(i) : next.delete(i)
+                        setSelectedKws(next)
+                      }}
+                      className="w-2.5 h-2.5"
+                    />
+                    {kw.keyword}
+                  </label>
+                )
+              })}
             </div>
             <button
               onClick={approveKeywords}
@@ -205,7 +226,7 @@ export default function RightPanel({
           <input
             value={newKw}
             onChange={e => setNewKw(e.target.value)}
-            placeholder={locale === 'de' ? 'z.B. Bauüberwachung' : 'e.g. Construction'}
+            placeholder={locale === 'de' ? 'z.B. Bauueberwachung' : 'e.g. Construction'}
             className="flex-1 min-w-0 text-xs border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <select
@@ -227,35 +248,59 @@ export default function RightPanel({
         </form>
       </div>
 
-      {/* Keywords by category */}
-      {CATEGORIES.map(cat => (
-        <div key={cat} className="bg-white rounded-xl border border-gray-100 p-3">
-          <h3 className="text-xs font-semibold text-gray-700 mb-2">
-            {t(`categories.${cat}` as any)}
-            <span className="ml-1.5 font-normal text-gray-400">({grouped[cat].length})</span>
+      {/* Keywords color-coded display */}
+      <div className="bg-white rounded-xl border border-gray-100 p-3 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-gray-700">
+            {locale === 'de' ? 'Suchbegriffe' : 'Search Keywords'}
+            <span className="ml-1.5 font-normal text-gray-400">({keywords.length})</span>
           </h3>
-          {grouped[cat].length === 0 ? (
-            <p className="text-[10px] text-gray-400">--</p>
-          ) : (
-            <div className="flex flex-wrap gap-1">
-              {grouped[cat].map(kw => (
+        </div>
+
+        {/* Color legend */}
+        <div className="flex flex-wrap gap-2 mb-3 pb-2 border-b border-gray-100">
+          {[
+            { shade: BLUE_SHADES[0], label: locale === 'de' ? 'Leistung (+3)' : 'Service (+3)' },
+            { shade: BLUE_SHADES[1], label: locale === 'de' ? 'Firma (+2)' : 'Company (+2)' },
+            { shade: BLUE_SHADES[2], label: locale === 'de' ? 'Allgemein (+1)' : 'General (+1)' },
+          ].map(({ shade, label }) => (
+            <div key={label} className="flex items-center gap-1">
+              <span className={`w-3 h-3 rounded ${shade.bg}`} />
+              <span className="text-[10px] text-gray-500">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* All keywords as color-coded tags */}
+        {keywords.length === 0 ? (
+          <p className="text-[10px] text-gray-400 py-2">
+            {locale === 'de'
+              ? 'Noch keine Keywords. Lade eine PDF hoch oder fuege manuell hinzu.'
+              : 'No keywords yet. Upload a PDF or add manually.'}
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {keywords.map(kw => {
+              const shade = getKeywordShade(kw)
+              return (
                 <div
                   key={kw.id}
-                  className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded border ${CATEGORY_COLORS[cat]}`}
+                  className={`group flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border font-medium
+                    ${shade.bg} ${shade.text} ${shade.border}`}
                 >
                   <span>{kw.keyword}</span>
                   <button
                     onClick={() => removeKeyword(kw.id)}
-                    className="opacity-40 hover:opacity-100 ml-0.5"
+                    className="opacity-40 hover:opacity-100 ml-0.5 transition-opacity"
                   >
                     x
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -125,7 +125,7 @@ export interface Tender {
   pdf_url?: string
   score?: number
   matched_keywords?: string[]
-  status?: 'interested' | 'working_on' | 'dismissed'
+  status?: 'interested' | 'working_on' | 'dismissed' | 'bid' | 'no_bid'
   created_at: string
 }
 
@@ -151,6 +151,7 @@ export interface ExtractedKeyword {
 export interface DashboardData {
   working_on: Tender[]
   interested: Tender[]
+  completed: Tender[]
   recent_tenders: Tender[]
   last_scrape_at?: string
   last_scrape_status?: string

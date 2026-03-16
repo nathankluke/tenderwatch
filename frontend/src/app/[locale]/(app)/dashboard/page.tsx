@@ -41,7 +41,12 @@ export default function DashboardPage() {
     // Move tender between sections based on new status
     setDashData(prev => {
       if (!prev) return prev
-      const allTenders = [...prev.working_on, ...prev.interested, ...prev.recent_tenders]
+      const allTenders = [
+        ...prev.working_on,
+        ...prev.interested,
+        ...(prev.completed || []),
+        ...prev.recent_tenders,
+      ]
       const tender = allTenders.find(t => t.id === id)
       if (!tender) return prev
 
@@ -56,6 +61,9 @@ export default function DashboardPage() {
         interested: status === 'interested'
           ? [...removeFrom(prev.interested), updated]
           : removeFrom(prev.interested),
+        completed: (status === 'bid' || status === 'no_bid')
+          ? [...removeFrom(prev.completed || []), updated]
+          : removeFrom(prev.completed || []),
         recent_tenders: prev.recent_tenders.map(t => t.id === id ? updated : t),
       }
     })
@@ -128,11 +136,12 @@ export default function DashboardPage() {
 
       {/* Three-panel layout */}
       <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left: Working On + Interested */}
+        {/* Left: Working On + Interested + Completed */}
         <div className="w-1/4 min-w-56 hidden lg:flex flex-col">
           <LeftPanel
             workingOn={dashData?.working_on ?? []}
             interested={dashData?.interested ?? []}
+            completed={dashData?.completed ?? []}
             profileId={activeProfileId}
             loading={dashLoading}
             onStatusChange={handleStatusChange}
@@ -156,6 +165,7 @@ export default function DashboardPage() {
         <LeftPanel
           workingOn={dashData?.working_on ?? []}
           interested={dashData?.interested ?? []}
+          completed={dashData?.completed ?? []}
           profileId={activeProfileId}
           loading={dashLoading}
           onStatusChange={handleStatusChange}

@@ -10,10 +10,14 @@
     "title": "Dashboard",
     "workingOn": "Working On",
     "interested": "Interested",
+    "completed": "Completed",
+    "bid": "Bid",
+    "noBid": "No Bid",
     "recentTenders": "Recent Tenders",
     "lastScan": "Last Scan",
     "noWorkingOn": "No tenders currently in progress",
     "noInterested": "No tenders marked as interested",
+    "noCompleted": "No completed projects",
     "noTenders": "No tenders found yet. Please run a scan."
   },
   "tenders": {
@@ -31,10 +35,14 @@
     "openPDF": "PDF",
     "markInterested": "Interested",
     "markWorking": "Working On",
+    "markBid": "Bid",
+    "markNoBid": "No Bid",
     "removeStatus": "Remove status",
     "sendBekanntmachung": "Extract Keywords",
     "noResults": "No tenders found",
-    "loading": "Loading tenders..."
+    "loading": "Loading tenders...",
+    "loadMore": "Load more",
+    "allLoaded": "All results loaded"
   },
   "scores": {
     "veryRelevant": "Very relevant",
@@ -68,6 +76,7 @@
     "pendingApproval": "Pending Approval",
     "noProfiles": "No profiles yet. Create your first profile.",
     "deleteProfile": "Delete Profile",
+    "renameProfile": "Rename",
     "saveProfile": "Save"
   },
   "login": {

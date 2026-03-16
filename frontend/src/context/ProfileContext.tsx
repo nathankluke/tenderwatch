@@ -8,6 +8,7 @@ interface ProfileContextType {
   activeProfileId: string | undefined
   setActiveProfileId: (id: string) => void
   createProfile: (name: string) => Promise<Profile>
+  renameProfile: (id: string, name: string) => Promise<void>
   deleteProfile: (id: string) => Promise<void>
   toggleEmail: (id: string) => Promise<void>
   loading: boolean
@@ -48,9 +49,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     setError('')
     const p = await api.profiles.create({ name })
     setProfiles(prev => [...prev, p])
-    if (!activeProfileId) setActiveProfileId(p.id)
+    setActiveProfileId(p.id)
     return p
-  }, [activeProfileId])
+  }, [])
+
+  const renameProfile = useCallback(async (id: string, name: string) => {
+    setError('')
+    const updated = await api.profiles.update(id, { name })
+    setProfiles(prev => prev.map(p => p.id === id ? { ...p, name: updated.name } : p))
+  }, [])
 
   const deleteProfile = useCallback(async (id: string) => {
     await api.profiles.delete(id)
@@ -75,11 +82,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     activeProfileId,
     setActiveProfileId,
     createProfile,
+    renameProfile,
     deleteProfile,
     toggleEmail,
     loading,
     error,
-  }), [profiles, activeProfileId, createProfile, deleteProfile, toggleEmail, loading, error])
+  }), [profiles, activeProfileId, createProfile, renameProfile, deleteProfile, toggleEmail, loading, error])
 
   return (
     <ProfileContext.Provider value={value}>

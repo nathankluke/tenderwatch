@@ -7,9 +7,20 @@ function getScoreStyle(score: number): { bg: string; text: string; label: string
   return       { bg: '#f8fafc', text: '#94a3b8', label: 'lowRelevance' }
 }
 
-export default function ScoreBadge({ score }: { score: number }) {
+export default function ScoreBadge({ score, small = false }: { score: number; small?: boolean }) {
   const t = useTranslations('scores')
   const { bg, text, label } = getScoreStyle(score)
+
+  if (small) {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-7 h-5 rounded-full text-[10px] font-bold"
+        style={{ background: bg, color: text }}
+      >
+        {score}
+      </span>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center gap-0.5">

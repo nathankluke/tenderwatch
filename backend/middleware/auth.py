@@ -1,17 +1,27 @@
 """
 JWT authentication middleware for FastAPI.
-Verifies Supabase-issued JWT tokens passed as Authorization: Bearer <token>.
+Verifies Supabase-issued JWT tokens using JWKS (ES256).
 """
 
 import os
 import jwt
+from jwt import PyJWKClient
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer()
 
-# Supabase JWT secrets are plain UTF-8 strings, NOT base64-encoded
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").encode()
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+
+_jwks_client = None
+
+
+def get_jwks_client():
+    global _jwks_client
+    if _jwks_client is None:
+        _jwks_client = PyJWKClient(JWKS_URL)
+    return _jwks_client
 
 
 def verify_token(
@@ -23,10 +33,12 @@ def verify_token(
     """
     token = credentials.credentials
     try:
+        jwks_client = get_jwks_client()
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
         payload = jwt.decode(
             token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            signing_key.key,
+            algorithms=["ES256"],
             audience="authenticated",
         )
         return payload
@@ -43,5 +55,5 @@ def verify_token(
 
 
 def get_user_id(payload: dict = Depends(verify_token)) -> str:
-    """Shortcut dependency – returns just the user_id string."""
+    """Shortcut dependency -- returns just the user_id string."""
     return payload["sub"]
