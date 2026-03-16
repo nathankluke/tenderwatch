@@ -68,6 +68,7 @@ export const api = {
 
   dashboard: {
     get: (profileId?: string)          => request<DashboardData>(`/dashboard${profileId ? `?profile_id=${profileId}` : ''}`),
+    scan: ()                           => request<{ status: string }>('/dashboard/scan', { method: 'POST' }),
   },
 
   uploads: {

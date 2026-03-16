@@ -31,22 +31,22 @@ export default function SettingsPage() {
       const supabase = createClient()
       const { data } = await supabase.auth.getSession()
       const token = data.session?.access_token
-      const secret = process.env.NEXT_PUBLIC_INTERNAL_SECRET ?? ''
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/internal/run-scrapers`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/scan`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'x-service-key': secret,
+          'Content-Type': 'application/json',
         },
       })
       if (res.ok) {
-        setScanMsg(de ? '✅ Scan gestartet! Ergebnisse erscheinen in ~5 Minuten.' : '✅ Scan started! Results appear in ~5 minutes.')
+        setScanMsg(de ? 'Scan gestartet! Ergebnisse erscheinen in ~5 Minuten.' : 'Scan started! Results appear in ~5 minutes.')
       } else {
-        setScanMsg(de ? '❌ Fehler beim Starten des Scans.' : '❌ Failed to start scan.')
+        const err = await res.text()
+        setScanMsg(de ? `Fehler beim Starten des Scans: ${err}` : `Failed to start scan: ${err}`)
       }
     } catch {
-      setScanMsg(de ? '❌ Verbindung zum Server fehlgeschlagen.' : '❌ Could not reach server.')
+      setScanMsg(de ? 'Verbindung zum Server fehlgeschlagen.' : 'Could not reach server.')
     } finally {
       setScanning(false)
     }
@@ -61,7 +61,7 @@ export default function SettingsPage() {
       {/* Account */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-2">
         <h2 className="text-sm font-semibold text-gray-700">
-          {de ? '👤 Konto' : '👤 Account'}
+          {de ? 'Konto' : 'Account'}
         </h2>
         <p className="text-sm text-gray-600">
           {de ? 'Angemeldet als' : 'Signed in as'}: <strong>{email}</strong>
@@ -71,7 +71,7 @@ export default function SettingsPage() {
       {/* Manual scan */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
         <h2 className="text-sm font-semibold text-gray-700">
-          🔄 {de ? 'Manueller Scan' : 'Manual Scan'}
+          {de ? 'Manueller Scan' : 'Manual Scan'}
         </h2>
         <p className="text-xs text-gray-500">
           {de
@@ -97,7 +97,7 @@ export default function SettingsPage() {
       {/* Platform info */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">
-          🌐 {de ? 'Aktive Plattformen' : 'Active Platforms'}
+          {de ? 'Aktive Plattformen' : 'Active Platforms'}
         </h2>
         <div className="grid grid-cols-2 gap-2">
           {['TED Europa', 'Mercell', 'evergabe-online', 'service.bund.de', 'DTVP', 'Subreport ELVIS', 'vergabe24'].map(p => (
@@ -112,7 +112,7 @@ export default function SettingsPage() {
       {/* Cost info */}
       <div className="bg-blue-50 rounded-2xl border border-blue-100 p-5">
         <h2 className="text-sm font-semibold text-blue-800 mb-2">
-          💡 {de ? 'Laufende Kosten' : 'Running Costs'}
+          {de ? 'Laufende Kosten' : 'Running Costs'}
         </h2>
         <div className="text-xs text-blue-700 space-y-1">
           <p>Hetzner VPS (CX22): ~4 €/Monat</p>

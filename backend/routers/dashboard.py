@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Query
+import os
+from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from typing import Optional
 from middleware.auth import get_user_id
 from db.supabase_client import get_client
@@ -78,6 +79,18 @@ async def get_dashboard(
         reverse=True,
     )
 
+    # ── Completed (bid / no_bid) ──────────────────────────────────
+    completed_result = client.table("tender_status").select(
+        "tender_id, status, updated_at, tenders(*)"
+    ).eq("user_id", user_id).in_("status", ["bid", "no_bid"]).order(
+        "updated_at", desc=True
+    ).limit(20).execute()
+    completed_tenders = [
+        {**row["tenders"], "status": row["status"]}
+        for row in completed_result.data
+        if row.get("tenders")
+    ]
+
     # ── Last scrape info ─────────────────────────────────────────
     last_scrape = client.table("scrape_runs").select(
         "started_at, status"
@@ -88,7 +101,30 @@ async def get_dashboard(
     return {
         "working_on": working_tenders,
         "interested": interested_tenders,
+        "completed": completed_tenders,
         "recent_tenders": recent_enriched,
         "last_scrape_at": last_scrape_at,
         "last_scrape_status": last_scrape_status,
     }
+
+
+@router.post("/scan")
+async def trigger_scan(
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id),
+):
+    """User-facing manual scan trigger."""
+    import httpx
+
+    service_key = os.getenv("INTERNAL_SERVICE_SECRET", "change-me-in-production")
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "http://127.0.0.1:8000/internal/run-scrapers",
+                headers={"X-Service-Key": service_key},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return {"status": "started"}
+    except Exception as e:
+        raise HTTPException(500, f"Scan konnte nicht gestartet werden: {e}")

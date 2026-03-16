@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { api, type Keyword, type ExtractedKeyword } from '@/lib/api'
+import { api, type Keyword, type ExtractedKeyword, type PdfUpload } from '@/lib/api'
 
 const CATEGORIES = ['leistung', 'allgemein', 'firma'] as const
 type Category = typeof CATEGORIES[number]
@@ -41,15 +41,24 @@ export default function RightPanel({
   const [uploadId, setUploadId] = useState<string | null>(null)
   const [selectedKws, setSelectedKws] = useState<Set<number>>(new Set())
   const [isDragging, setIsDragging] = useState(false)
+  const [uploads, setUploads] = useState<PdfUpload[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Load keywords and uploads when profile changes
   useEffect(() => {
     if (!profileId) return
     api.keywords.list(profileId).then(setKeywords).catch(() => {})
+    api.uploads.list(profileId).then(setUploads).catch(() => {})
     setExtractedKws([])
     setUploadStatus('')
     setUploadId(null)
   }, [profileId])
+
+  const refreshKeywords = async () => {
+    if (!profileId) return
+    const updated = await api.keywords.list(profileId)
+    setKeywords(updated)
+  }
 
   const handleFileUpload = async (file: File) => {
     if (!profileId) return
@@ -84,6 +93,8 @@ export default function RightPanel({
           ? `${data.extracted_keywords.length} Keywords gefunden`
           : `${data.extracted_keywords.length} keywords found`
       )
+      // Refresh uploads list
+      api.uploads.list(profileId).then(setUploads).catch(() => {})
     } catch (e: any) {
       setUploadStatus(`Fehler: ${e.message}`)
     }
@@ -100,8 +111,7 @@ export default function RightPanel({
     if (!uploadId || !profileId) return
     const approved = extractedKws.filter((_, i) => selectedKws.has(i))
     const result = await api.uploads.approve(profileId, uploadId, approved)
-    const updated = await api.keywords.list(profileId)
-    setKeywords(updated)
+    await refreshKeywords()
     setExtractedKws([])
     setUploadId(null)
     setUploadStatus(
@@ -218,6 +228,39 @@ export default function RightPanel({
           </div>
         )}
       </div>
+
+      {/* Uploaded PDFs list */}
+      {uploads.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-3 flex-shrink-0">
+          <h3 className="text-xs font-semibold text-gray-700 mb-2">
+            {locale === 'de' ? 'Hochgeladene PDFs' : 'Uploaded PDFs'}
+            <span className="ml-1.5 font-normal text-gray-400">({uploads.length})</span>
+          </h3>
+          <div className="space-y-1.5">
+            {uploads.map(u => (
+              <div key={u.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                  </svg>
+                  <span className="text-gray-700 truncate">{u.filename}</span>
+                </div>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ml-2
+                  ${u.status === 'approved' ? 'bg-green-100 text-green-700'
+                    : u.status === 'pending_approval' ? 'bg-amber-100 text-amber-700'
+                    : u.status === 'processing' ? 'bg-blue-100 text-blue-700'
+                    : 'bg-red-100 text-red-700'}`}
+                >
+                  {u.status === 'approved' ? (locale === 'de' ? 'Genehmigt' : 'Approved')
+                    : u.status === 'pending_approval' ? (locale === 'de' ? 'Ausstehend' : 'Pending')
+                    : u.status === 'processing' ? (locale === 'de' ? 'Verarbeite' : 'Processing')
+                    : (locale === 'de' ? 'Fehler' : 'Error')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Add keyword manually */}
       <div className="bg-white rounded-xl border border-gray-100 p-3 flex-shrink-0">
