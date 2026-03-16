@@ -19,13 +19,14 @@ def _verify_key(x_service_key: str = Header(...)):
 async def run_scrapers(
     background_tasks: BackgroundTasks,
     x_service_key: str = Header(...),
+    profile_id: str = None,
 ):
     _verify_key(x_service_key)
-    background_tasks.add_task(_run_pipeline)
+    background_tasks.add_task(_run_pipeline, profile_id=profile_id)
     return {"status": "started"}
 
 
-async def _run_pipeline():
+async def _run_pipeline(profile_id: str = None):
     """Full pipeline: scrape → score → email. Runs in background."""
     from services.scraper_runner import run_all_scrapers
     from services.scoring_service import score_new_tenders
@@ -33,7 +34,7 @@ async def _run_pipeline():
 
     import logging
     logger = logging.getLogger("pipeline")
-    logger.info("Pipeline gestartet")
+    logger.info(f"Pipeline gestartet (profile_id={profile_id})")
 
     try:
         new_tender_ids = await run_all_scrapers()

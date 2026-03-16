@@ -12,7 +12,6 @@ import logging
 import re
 from anthropic import Anthropic
 
-from database.models import get_connection
 from scraper.base import Tender
 
 logger = logging.getLogger(__name__)
@@ -21,26 +20,30 @@ client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 
 
 def load_keywords_from_db() -> dict:
-    """Lädt aktuelle Keywords aus der Datenbank."""
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT word, priority FROM keywords WHERE active=1")
-    rows = cur.fetchall()
-    conn.close()
-
-    keywords = {"primary": [], "secondary": []}
-    for row in rows:
-        keywords[row["priority"]].append(row["word"])
-    return keywords
+    """Lädt aktuelle Keywords aus Supabase."""
+    try:
+        from db.supabase_client import get_client
+        client_db = get_client()
+        result = client_db.table("keywords").select("keyword, category").eq("approved", True).execute()
+        keywords = {"primary": [], "secondary": []}
+        for row in result.data:
+            if row.get("category") == "leistung":
+                keywords["primary"].append(row["keyword"])
+            else:
+                keywords["secondary"].append(row["keyword"])
+        return keywords
+    except Exception:
+        return {"primary": [], "secondary": []}
 
 
 def load_priority_clients() -> list[str]:
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT name FROM priority_clients WHERE active=1")
-    clients = [r[0] for r in cur.fetchall()]
-    conn.close()
-    return clients
+    try:
+        from db.supabase_client import get_client
+        client_db = get_client()
+        result = client_db.table("keywords").select("keyword").eq("category", "firma").eq("approved", True).execute()
+        return [r["keyword"] for r in result.data if r.get("keyword")]
+    except Exception:
+        return []
 
 
 def keyword_score(tender: Tender, keywords: dict, priority_clients: list) -> tuple[int, list]:
@@ -173,33 +176,35 @@ def process_tenders(tenders: list[Tender]) -> list[Tender]:
 
 
 def save_tenders_to_db(tenders: list[Tender]) -> int:
-    """Speichert Tenders in DB. Gibt Anzahl neuer Einträge zurück."""
-    conn = get_connection()
-    cur = conn.cursor()
+    """Speichert Tenders in Supabase. Gibt Anzahl neuer Einträge zurück."""
+    from db.supabase_client import get_client
+    client_db = get_client()
     new_count = 0
 
     for tender in tenders:
         if tender.score < 1:
-            continue  # Irrelevante Tenders nicht speichern
+            continue
 
         try:
-            cur.execute("""
-                INSERT OR IGNORE INTO tenders
-                    (id, platform, title, client, services, description, summary,
-                     score, matched_keywords, publication_date, deadline,
-                     pdf_url, detail_url, country, cpv_codes)
-                VALUES
-                    (:id, :platform, :title, :client, :services, :description, :summary,
-                     :score, :matched_keywords, :publication_date, :deadline,
-                     :pdf_url, :detail_url, :country, :cpv_codes)
-            """, tender.to_dict())
-
-            if cur.rowcount > 0:
+            tender_data = {
+                "external_id": tender.id,
+                "platform": tender.platform,
+                "title": tender.title,
+                "client": tender.client,
+                "description": (tender.description or "")[:3000],
+                "summary": tender.summary,
+                "url": tender.detail_url,
+                "pdf_url": tender.pdf_url,
+                "publication_date": tender.publication_date or None,
+                "deadline": tender.deadline or None,
+            }
+            result = client_db.table("tenders").upsert(
+                tender_data, on_conflict="external_id,platform"
+            ).execute()
+            if result.data:
                 new_count += 1
         except Exception as e:
             logger.error(f"[DB] Fehler beim Speichern von '{tender.title}': {e}")
 
-    conn.commit()
-    conn.close()
     logger.info(f"[DB] {new_count} neue Ausschreibungen gespeichert.")
     return new_count

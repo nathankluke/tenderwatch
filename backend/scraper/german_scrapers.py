@@ -77,13 +77,22 @@ class EvergabeOnlineScraper(BaseScraper):
         return tenders
 
     def _get_keywords(self) -> list[str]:
-        from database.models import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT word FROM keywords WHERE active=1 AND priority='primary' ORDER BY id")
-        words = [r[0] for r in cur.fetchall()]
-        conn.close()
-        return words or ["Bauüberwachung", "Bauoberleitung", "Vertragsmanagement"]
+        """Get search keywords from Supabase, with sensible defaults."""
+        try:
+            from db.supabase_client import get_client
+            client = get_client()
+            result = client.table("keywords").select("keyword").eq(
+                "approved", True
+            ).limit(20).execute()
+            words = [r["keyword"] for r in result.data if r.get("keyword")]
+            if words:
+                return words
+        except Exception:
+            pass
+        return [
+            "Bauüberwachung", "Bauoberleitung", "Vertragsmanagement",
+            "Nachtragsmanagement", "Projektsteuerung", "Ingenieurleistung",
+        ]
 
     def _dedupe(self, tenders: list) -> list:
         seen = set()

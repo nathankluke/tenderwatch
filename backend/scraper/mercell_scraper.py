@@ -21,7 +21,7 @@ class MercellScraper(BaseScraper):
     LOGIN_URL = "https://s2c.mercell.com/login"
     SEARCH_URL = "https://s2c.mercell.com/api/notices/search"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict = None):
         super().__init__(config)
         self.email = os.getenv("MERCELL_EMAIL", "")
         self.password = os.getenv("MERCELL_PASSWORD", "")

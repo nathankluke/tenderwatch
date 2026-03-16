@@ -35,7 +35,7 @@ class TEDScraper(BaseScraper):
     PLATFORM_NAME = "TED Europa"
     API_BASE = "https://api.ted.europa.eu/v3"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict = None):
         super().__init__(config)
         self.api_key = os.getenv("TED_API_KEY", "")
         if self.api_key:
