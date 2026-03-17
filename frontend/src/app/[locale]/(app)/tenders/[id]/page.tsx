@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import Link from 'next/link'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import { api, type TenderDetail, type ExtractedKeyword } from '@/lib/api'
 
@@ -11,6 +10,7 @@ export default function TenderDetailPage() {
   const t = useTranslations('tenders')
   const locale = useLocale()
   const params = useParams()
+  const router = useRouter()
   const tenderId = params.id as string
   const [tender, setTender] = useState<TenderDetail | null>(null)
   const [extracting, setExtracting] = useState(false)
@@ -60,12 +60,12 @@ export default function TenderDetailPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-4">
       {/* Back */}
-      <Link
-        href={`/${locale}/tenders`}
+      <button
+        onClick={() => router.back()}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"
       >
         ← {locale === 'de' ? 'Zurück' : 'Back'}
-      </Link>
+      </button>
 
       {/* Main card */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">

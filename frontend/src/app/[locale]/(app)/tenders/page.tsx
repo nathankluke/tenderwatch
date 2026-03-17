@@ -33,7 +33,15 @@ export default function TendersPage() {
       search: search || undefined,
       limit: 100,
     }).then(data => {
-      setTenders(data)
+      // Deduplicate by id in case the same tender appears multiple times
+      // (e.g. matched by several keywords producing duplicate rows)
+      const seen = new Set<string>()
+      const unique = data.filter(t => {
+        if (seen.has(t.id)) return false
+        seen.add(t.id)
+        return true
+      })
+      setTenders(unique)
       setLoading(false)
     })
   }, [activeProfile, platform, minScore, search])

@@ -83,31 +83,50 @@ def ai_process_tender(tender: Tender, keywords: dict) -> dict:
     kw_list_primary = ", ".join(keywords.get("primary", []))
     kw_list_secondary = ", ".join(keywords.get("secondary", []))
 
-    prompt = f"""Du bist ein Experte für öffentliche Ausschreibungen im Bereich Ingenieurdienstleistungen.
+    prompt = f"""Du bist ein Experte für öffentliche Ausschreibungen im europäischen Infrastrukturmarkt, spezialisiert auf Dienstleistungen für Übertragungsnetzbetreiber (TSOs) und Infrastrukturprojekte.
 
-Analysiere diese Ausschreibung:
+Analysiere diese Ausschreibung und bewerte ihre Relevanz:
 
 TITEL: {tender.title}
 AUFTRAGGEBER: {tender.client}
-PLATTFORM: {tender.platform}
-BESCHREIBUNG: {tender.description[:1500] if tender.description else "Nicht verfügbar"}
+BESCHREIBUNG: {tender.description[:2000] if tender.description else "Nicht verfügbar"}
 
-WICHTIGE KEYWORDS (Primär): {kw_list_primary}
-WENIGER WICHTIGE KEYWORDS (Sekundär): {kw_list_secondary}
+SCORING-KRITERIEN:
+
+Score 9-10 (Höchste Relevanz – direkt ausgeschrieben):
+• Claim Management, Contract Management, Commercial Management
+• Procurement Cost Management, Nachtragsprüfung, Contract Administration
+• Bauüberwachung, Bauoberleitung, Construction Management
+• Owner's Engineer / Owner's Representative, Fremdüberwachung von Bauleistungen
+
+Score 6-8 (Hohe Relevanz):
+• Project Management, Program Management, PMO / Project Controls
+• Terminplanung / Scheduling, Kostencontrolling / Cost Control, Projektsteuerung
+• Kombination aus Planung + Bauüberwachung oder Projektmanagement
+
+Score 3-5 (Mittlere Relevanz – möglicherweise interessant):
+• Verwandte Ingenieurleistungen mit Bezug zu Infrastruktur/Energie
+• Ausschreibungen die zusätzlich Planungsleistungen enthalten wenn Bauüberwachung/PM Teil davon
+
+Score 0-2 (Nicht relevant – automatisch ausfiltern):
+• Reine Bauleistungen (Erd-, Kabel-, Tiefbauarbeiten ohne Überwachung)
+• Reine Lieferleistungen (Equipment, Kabel, Komponenten)
+• Reine Test- oder Inbetriebnahmeleistungen
+• Reine Studien oder Gutachten ohne Projektbezug
+• IT-Dienstleistungen, Reinigung, Catering, Wartung
+
+BONUS (erhöht Score um 1-2 Punkte):
+• Auftraggeber ist TenneT, Amprion, TransnetBW, 50Hertz oder deren Töchter
+• Bezug zu Projekten: SuedLink, OstWestLink, NordWestLink, Rheinquerung, Terra-U
+• Hochspannungsinfrastruktur, Offshore-Windanbindung, Netzausbau
 
 Antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärung):
 {{
   "summary": "Zusammenfassung in maximal 20 deutschen Wörtern",
-  "services": "Extrahierte Leistungen aus der Ausschreibung (kommagetrennt)",
-  "score": <Zahl 0-10: 0=nicht relevant, 10=perfekt passend für Ingenieurdienstleistungen>,
-  "score_reason": "Ein kurzer Satz warum dieser Score"
-}}
-
-Scoring-Kriterien:
-- 8-10: Bauüberwachung, Bauoberleitung, Claim/Contract Management direkt gesucht
-- 5-7: Verwandte Ingenieurleistungen, Projektsteuerung, technische Überwachung  
-- 2-4: Möglicherweise relevant, aber unklar
-- 0-1: Nicht relevant (Bauleistungen, Lieferungen, IT, etc.)"""
+  "services": "Extrahierte ausgeschriebene Leistungen (kommagetrennt)",
+  "score": <Ganzzahl 0-10>,
+  "score_reason": "Ein präziser Satz warum dieser Score"
+}}"""
 
     try:
         message = client.messages.create(
