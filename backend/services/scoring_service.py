@@ -71,14 +71,14 @@ async def score_new_tenders(tender_ids: list[str]):
             # Step 1: fast keyword score
             score, matched = keyword_score(t, keywords_dict, priority_clients)
 
-            # Step 2: Claude summary (only if relevant & no summary yet)
-            if score >= 2 and not row.get("summary"):
+            # Step 2: Claude scoring — always runs to get accurate relevance score
+            if score >= 1:
                 try:
                     result = ai_process_tender(t, keywords_dict)
-                    summary   = result.get("summary", "")
-                    ai_score  = result.get("score", score)
+                    summary  = result.get("summary", "")
+                    ai_score = result.get("score", score)
                     if isinstance(ai_score, (int, float)):
-                        score = min(10, max(1, int(ai_score)))
+                        score = min(10, max(0, int(ai_score)))
                     if summary:
                         client.table("tenders").update(
                             {"summary": summary}
