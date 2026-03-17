@@ -57,7 +57,10 @@ export const api = {
   },
 
   tenders: {
-    list: (params: TenderListParams)   => request<Tender[]>(`/tenders?${new URLSearchParams(params as any)}`),
+    list: (params: TenderListParams)   => {
+      const p = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== 'undefined'))
+      return request<Tender[]>(`/tenders?${new URLSearchParams(p as any)}`)
+    },
     get: (id: string)                  => request<TenderDetail>(`/tenders/${id}`),
     setStatus: (id: string, body: { status: string; profile_id?: string; notes?: string }) =>
       request<{ status: string }>(`/tenders/${id}/status`, { method: 'POST', body: JSON.stringify(body) }),

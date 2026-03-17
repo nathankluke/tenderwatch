@@ -23,10 +23,30 @@ def _load_profile_keywords(profile_id: str) -> list[str]:
         ).eq("approved", True).limit(20).execute()
         words = [r["keyword"] for r in result.data if r.get("keyword")]
         if words:
-            logger.info(f"Profile {profile_id}: {len(words)} Keywords geladen: {words[:5]}")
+            logger.info(f"Profile {profile_id}: {len(words)} Keywords geladen: {words}")
             return words
     except Exception as e:
         logger.error(f"Keywords laden fehlgeschlagen: {e}")
+    return []
+
+
+def _load_profile_buyers(profile_id: str) -> list[str]:
+    """Load buyer/Auftraggeber names for a profile."""
+    try:
+        client = get_client()
+        result = client.table("profiles").select("buyers").eq(
+            "id", profile_id
+        ).limit(1).execute()
+        if result.data and result.data[0].get("buyers"):
+            buyers = result.data[0]["buyers"]
+            if isinstance(buyers, str):
+                import json
+                buyers = json.loads(buyers)
+            if isinstance(buyers, list):
+                logger.info(f"Profile {profile_id}: Auftraggeber: {buyers}")
+                return buyers
+    except Exception as e:
+        logger.warning(f"Auftraggeber laden fehlgeschlagen: {e}")
     return []
 
 
